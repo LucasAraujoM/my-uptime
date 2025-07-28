@@ -16,8 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('url');
             $table->string('type');
-            $table->string('status');
-            $table->string('keyword');
+            $table->string('status')->default('pending');
+            $table->string('interval');
+            $table->string('keyword')->nullable();
             $table->timestamps();
         });
     }

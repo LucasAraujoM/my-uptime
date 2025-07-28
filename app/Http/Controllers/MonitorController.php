@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Log as ResponseLog;
 use App\Models\Monitor;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
