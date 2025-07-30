@@ -101,3 +101,12 @@ Schedule::call(function () {
         dispatch(new CheckMonitor($monitor->id));
     }
 })->daily();
+
+Schedule::command('logs:purge-responses')->dailyAt('03:00');
+
+Schedule::call(function () {
+    $monitors = Monitor::all();
+    foreach($monitors as $monitor) {
+        $monitor->calculateUptime();
+    }
+})->hourly();

@@ -11,15 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('logs', function (Blueprint $table) {
+        Schema::create('headers', function (Blueprint $table) {
             $table->id();
+            $table->string('key');
+            $table->string('value');
             $table->foreignId('monitor_id')->constrained()->cascadeOnDelete();
-            $table->string('status', 10);
-            $table->integer('response_time')->nullable();
-            $table->text('error_message')->nullable();
             $table->timestamps();
-
-            $table->index(['monitor_id', 'created_at']);
         });
     }
 
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('logs');
+        Schema::dropIfExists('headers');
     }
 };
