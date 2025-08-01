@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Monitor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -26,6 +27,9 @@ class CheckMonitors extends Command
      */
     public function handle()
     {
-        Log::info('hola');
+        $monitors = Monitor::all();
+        foreach ($monitors as $monitor) {
+            $monitor->calculateUptime();
+        }
     }
 }

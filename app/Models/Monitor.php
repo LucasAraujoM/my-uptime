@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\MonitorController;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -30,6 +31,7 @@ class Monitor extends Model
         if($this->status == 'paused'){
             $this->status = 'pending';
             $this->save();
+            MonitorController::checkStatus($this->id);
         }else{
             $this->status = 'paused';
             $this->save();

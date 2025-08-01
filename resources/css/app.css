@@ -33,10 +33,14 @@
 * Because Laravel defaults does not match well the design of daisyUI.
 */
 
-.mary-table-pagination span[aria-current="page"] > span {
-    @apply bg-primary text-base-100
+.mary-table-pagination span[aria-current="page"]>span {
+    @apply bg-primary text-white
 }
 
 .mary-table-pagination button {
     @apply cursor-pointer
+}
+
+.mary-table-pagination button, span[aria-current="page"]>span, span[aria-disabled="true"] span {
+    @apply bg-gray-800 text-white
 }
