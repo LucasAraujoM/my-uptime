@@ -5,87 +5,113 @@ use Livewire\Volt\Component;
 
 new class extends Component {
 
+    public ?int $id = null;
     public string $name = '';
     public string $url = '';
-    public string $condition = '';
-    public string $interval = '';
-    public string $method = '';
     public string $keyword = '';
-    public string $type = ';';
-    public $methods = [
-        ["id" => 0, "name" => "GET"],
-        ["id" => 1, "name" => "POST"],
-        ["id" => 2, "name" => "PUT"],
-        ["id" => 3, "name" => "DELETE"],
+    public string $type = 'http';
+    public string $method = '';
+    public string $interval = '';
+    public string $condition = '';
+    public string $timeout = '';
+
+    public array $methods;
+    public array $intervals;
+    public array $conditions;
+    public array $timeouts;
+    public array $types = [
+        ['id' => 'http', 'name' => 'HTTP'],
+        ['id' => 'ping', 'name' => 'Ping']
     ];
-    public $intervals = [
-        ["id" => 0, "name" => "every 60 seconds"],
-        ["id" => 1, "name" => "every 10 minutes"],
-        ["id" => 2, "name" => "every 30 minutes"],
-        ["id" => 3, "name" => "every 1 hour"],
-        ["id" => 4, "name" => "every 2 hours"],
-        ["id" => 5, "name" => "every 3 hours"],
-        ["id" => 6, "name" => "every 4 hours"],
-        ["id" => 7, "name" => "every 5 hours"],
-        ["id" => 8, "name" => "every 6 hours"],
-        ["id" => 9, "name" => "every 12 hours"],
-        ["id" => 10, "name" => "every 24 hours"],
-    ];
-    public $conditions = [
-        ["id" => 0, "name" => "No Keyword Monitoring"],
-        ["id" => 1, "name" => "When Keyword exists"],
-        ["id" => 2, "name" => "When Keyword not exists"],
-    ];
-    public $timeouts = [
-        ["id" => 0, "name" => "10 seconds"],
-        ["id" => 1, "name" => "30 seconds"],
-        ["id" => 2, "name" => "1 minute"],
-        ["id" => 3, "name" => "5 minutes"],
-    ];
+
+    public function mount($id = null)
+    {
+        $this->methods = config('constants.methods');
+        $this->intervals = config('constants.intervals');
+        $this->conditions = config('constants.conditions');
+        $this->timeouts = config('constants.timeouts');
+        
+        if ($id) {
+            $this->id = $id;
+            $monitor = Monitor::findOrFail($id);
+            $this->name = $monitor->name;
+            $this->url = $monitor->url;
+            $this->type = $monitor->type;
+            $this->keyword = $monitor->keyword ?? '';
+            $this->method = $monitor->method ?? '';
+            $this->interval = $monitor->interval;
+            $this->condition = $monitor->condition ?? '';
+            $this->timeout = $monitor->timeout ?? '';
+        }
+    }
 
     public function save()
     {
-        $this->validate([
+        $validationRules = [
             'name' => 'required',
             'url' => 'required|url',
-            'type' => 'required',
-            'keyword' => 'required',
+            'type' => 'required|in:http,ping',
             'interval' => 'required'
-        ]);
+        ];
+
+        // Only require keyword if condition is set to check for keyword
+        if ($this->condition == '1' || $this->condition == '2') {
+            $validationRules['keyword'] = 'required';
+        }
+
+        $this->validate($validationRules);
+
         try {
-            $monitor = new Monitor();
+            if (isset($this->id)) {
+                $monitor = Monitor::findOrFail($this->id);
+            } else {
+                $monitor = new Monitor();
+                $monitor->status = 'pending';
+            }
+            
             $monitor->name = $this->name;
             $monitor->url = $this->url;
-            //$monitor->method = $this->method;
-            //$monitor->condition = $this->condition;
-            //$monitor->interval = $this->interval;
-            $monitor->status = 'down';
+            $monitor->method = $this->method;
+            $monitor->condition = $this->condition;
+            $monitor->interval = $this->interval;
             $monitor->type = $this->type;
             $monitor->keyword = $this->keyword;
+            $monitor->timeout = $this->timeout;
             $monitor->save();
-            return redirect('/');
-        } catch (Exception $e) {
+            
+            $message = isset($this->id) ? 'Monitor updated successfully!' : 'Monitor created successfully!';
+            session()->flash('message', $message);
+            return redirect('/monitors');
+        } catch (\Exception $e) {
             $this->addError('url', $e->getMessage());
         }
     }
+    
     public function redirectBack()
     {
-        return redirect()->back();
+        return redirect('/monitors');
     }
 }; ?>
 
 <div>
-    <x-header title="Create Monitor" separator progress-indicator>
+    <x-header title="{{ $id ? 'Edit' : 'Create' }} Monitor" separator progress-indicator>
     </x-header>
 
     <x-form wire:submit="save" no-separator class="grid grid-cols-2 gap-4">
         <x-input label="Name" wire:model="name" placeholder="Endpoint1" />
         <x-input label="URL" wire:model="url" placeholder="www.example.com/endpoint1" />
         <x-select
+            label="Type"
+            wire:model="type"
+            :options="$types"
+            option-label="name"
+            option-value="id" />
+        <x-select
             label="Method"
             wire:model="method"
             :options="$methods"
-            placeholder="Select a method" />
+            placeholder="Select a method"
+            x-show="$wire.type === 'http'" />
         <x-select
             label="Interval"
             wire:model="interval"
@@ -94,14 +120,19 @@ new class extends Component {
         <x-select
             label="Condition"
             wire:model="condition"
-            :options="$conditions" />
-        <x-input label="Keyword to check" wire:model="keyword" />
+            :options="$conditions"
+            x-show="$wire.type === 'http'" />
+        <x-input 
+            label="Keyword to check" 
+            wire:model="keyword" 
+            x-show="$wire.condition == '1' || $wire.condition == '2'" 
+            help-text="The monitor will check if this keyword is present in the response." />
         <x-select
             label="Timeout"
             wire:model="timeout"
             :options="$timeouts" />
         <x-slot:actions>
-            <x-button label="Create Monitor" class="btn-primary" type="submit" spinner="save" />
+            <x-button label="{{ $id ? 'Update' : 'Create' }} Monitor" class="btn-primary" type="submit" spinner="save" />
             <x-button label="Cancel" class="btn-secondary" wire:click="redirectBack" />
         </x-slot:actions>
     </x-form>

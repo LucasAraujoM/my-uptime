@@ -10,9 +10,11 @@ new class extends Component {
     public $drawer = false;
     public array $sortBy = ['column' => 'status', 'direction' => 'asc'];
     public bool $myModal1 = false;
-    public $monitorToDelete = '';
+    public Monitor $monitorToDelete;
+    public $m_name = '';
     public $search = '';
     public $statusFilters = [];
+    public array $selected = [];
 
     public function resetFilters()
     {
@@ -50,14 +52,14 @@ new class extends Component {
             $query->whereIn('status', $this->statusFilters);
         }
 
-        return $query->orderBy(...array_values($this->sortBy))->paginate(10);
+        return $query->orderBy(...array_values($this->sortBy))->paginate(15);
     }
     public function headers(): array
     {
         return [
             ['key' => 'id', 'label' => 'id', 'class' => 'hidden'],
-            ['key' => 'name', 'label' => 'Name', 'class' => 'w-35', 'sortable' => false],
-            ['key' => 'url', 'label' => 'URL', 'class' => 'w-20', 'sortable' => false],
+            ['key' => 'name', 'label' => 'Name', 'class' => 'w-70', 'sortable' => false],
+            ['key' => 'url', 'label' => 'URL', 'class' => 'w-150', 'sortable' => false],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
         ];
     }
@@ -68,20 +70,31 @@ new class extends Component {
             'headers' => $this->headers()
         ];
     }
-    public function delete($monitor)
+    public function deleteModal(Monitor $monitor)
     {
         $this->monitorToDelete = $monitor;
+        $this->m_name = $monitor->name;
         $this->myModal1 = true;
-        try {
-            $monitor->delete();
-            return true;
-        } catch (Exception $e) {
-            return false;
-        }
+    }
+    public function delete()
+    {
+        $this->monitorToDelete->delete();
+        $this->myModal1 = false;
+    }
+    public function edit($monitorId)
+    {
+        $this->redirectRoute('edit-monitor', $monitorId);
     }
 }; ?>
 
 <div>
+    <x-modal @close="$wire.myModal1 = false" wire:model="myModal1" title="Are you sure?" class="backdrop-blur text-start">
+        This change will permanently delete {{$m_name}}.
+        <x-slot:actions>
+            <x-button label="Cancel" @click="$wire.myModal1 = false" />
+            <x-button label="Confirm" @click="$wire.delete()" />
+        </x-slot:actions>
+    </x-modal>
     <x-header title="Monitors" separator progress-indicator>
         <x-slot:middle class="!justify-end">
             <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
@@ -126,16 +139,41 @@ new class extends Component {
     @endif
     <x-card shadow>
         <x-table :headers="$headers" :rows="$monitors" :sort-by="$sortBy" with-pagination>
-            @scope('actions', $monitor)
+            @scope('cell_name', $monitor)
+            <div class="flex items-center">
+                <x-icon name="o-globe-alt" class="text-primary mr-2" />
+                {{ $monitor->name }}
+            </div>
+            @endscope
+
+            @scope('cell_url', $monitor)
+            <div class="flex items-center">
+                <x-icon name="o-link" class="text-gray-400 mr-2" />
+                <a href="{{ $monitor->url }}" target="_blank" class="hover:underline text-primary">
+                    {{ $monitor->url }}
+                </a>
+            </div>
+            @endscope
+
+            @scope('cell_status', $monitor)
+            <div class="flex items-center">
+                @if($monitor->status === 'up')
+                <x-icon name="o-check-circle" class="text-success mr-2" />
+                @elseif($monitor->status === 'down')
+                <x-icon name="o-x-circle" class="text-error mr-2" />
+                @elseif($monitor->status === 'pending')
+                <x-icon name="o-clock" class="text-warning mr-2" />
+                @elseif($monitor->status === 'paused')
+                <x-icon name="o-pause" class="text-gray-400 mr-2" />
+                @endif
+                {{ ucfirst($monitor->status) }}
+            </div>
+            @endscope
+
+            @scope('actions', $monitor, $m_name )
             <div class="flex">
-                <x-modal @close="$wire.delete($monitor)" wire:model="myModal1" title="Are you sure?" class="backdrop-blur text-start">
-                    This change will permanently delete {{$monitor->name}}.
-                    <x-slot:actions>
-                        <x-button label="Cancel" @click="$wire.myModal1 = false" />
-                        <x-button label="Confirm" @click="$wire.delete($monitor)" />
-                    </x-slot:actions>
-                </x-modal>
-                <x-button icon="o-trash" spinner class="btn-ghost btn-sm text-error" @click="$wire.myModal1 = true; $wire.monitorToDelete = $monitor" />
+                <x-button icon="o-pencil" spinner class="btn-ghost btn-sm text-primary" wire:click="edit({{$monitor->id}})" />
+                <x-button icon="o-trash" wire:click="deleteModal({{ $monitor->id }})" spinner class="btn-ghost btn-sm text-error" />
             </div>
             @endscope
         </x-table>
