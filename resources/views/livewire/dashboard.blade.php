@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    public $userName;
+
+    public function mount()
+    {
+        $this->userName = Auth::user()->name;
+    }
     public array $myChart = [
         'type' => 'line',
         'data' => [
@@ -33,7 +39,7 @@ new class extends Component {
 }; ?>
 
 <div>
-    <x-header title="Monitors" separator progress-indicator>
+    <x-header title="Monitors - {{ $userName }}" separator progress-indicator>
     </x-header>
     <x-card shadow>
         <div class="grid grid-cols-2 gap-4">
