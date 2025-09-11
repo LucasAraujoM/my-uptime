@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Monitor;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -68,7 +69,7 @@ new class extends Component {
                 $monitor = new Monitor();
                 $monitor->status = 'pending';
             }
-            
+            $monitor->user_id = Auth::user()->id;
             $monitor->name = $this->name;
             $monitor->url = $this->url;
             $monitor->method = $this->method;

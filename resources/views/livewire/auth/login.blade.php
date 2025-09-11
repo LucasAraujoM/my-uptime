@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Controller;
 use Livewire\Volt\Component;
+use Illuminate\Http\Request;
 
 new class extends Component {
     //
@@ -13,10 +15,31 @@ new class extends Component {
     {
         $this->title = 'Login';
     }
+    public function login()
+    {
+        $this->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+            'remember' => 'boolean',
+        ]);
+        $request = new Request([
+            'email' => $this->email,
+            'password' => $this->password,
+            'remember' => $this->remember,
+        ]);
+        $controller = new Controller();
+        $response = $controller->login($request);
+        if ($response) {
+            return $response;
+        }
+    }
 }; ?>
 @section('title', 'Login')
 <div class="max-w-md mx-auto mt-50 p-6 rounded shadow bg-base-300">
-    <form wire:submit.prevent="login">
+    @include('components.flash.messages')
+    <form
+    wire:submit.prevent="login"
+    >
         <x-mary-input 
             label="Email" 
             type="email" 

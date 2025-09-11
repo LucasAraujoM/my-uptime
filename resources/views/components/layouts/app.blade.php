@@ -42,21 +42,17 @@
                 {{-- User --}}
                 <x-menu-separator />
 
-                <x-list-item :item="$user" value="name" sub-value="email" no-separator no-hover class="-mx-2 !-my-2 rounded">
-                    <x-slot:actions>
-                        <x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="logoff" no-wire-navigate link="/logout" />
-                    </x-slot:actions>
-                </x-list-item>
+                <x-avatar placeholder="{{ substr($user->name, 0, 1) }}" title="{{ $user->name }}" subtitle="{{$user->email}}" class="!w-12" />
 
                 <x-menu-separator />
 
-                <x-menu-item title="Dashboard" icon="o-home" link="/" />
+                <x-menu-item title="Dashboard" icon="o-home" link="/dashboard" />
 
                 <x-menu-sub title="Monitors" icon="o-computer-desktop">
                     <x-menu-item title="Add Monitor" icon="o-squares-plus" link="/monitor/add" />
                     <x-menu-item title="List Monitors" icon="o-list-bullet" link="/monitors" />
-                    <x-menu-item title="Archives" icon="o-archive-box" link="####" />
                 </x-menu-sub>
+                <x-menu-item title="Alert Settings" icon="o-envelope" link="/alert-settings" />
             </x-menu>
             @endif
         </x-slot:sidebar>

@@ -8,10 +8,18 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     public $userName;
+    public $lastDownMonitor;
+    public $totalMonitors;
+    public $totalUptime;
+    public $totalDowntime;
 
     public function mount()
     {
         $this->userName = Auth::user()->name;
+        $this->lastDownMonitor = Monitor::where('user_id', Auth::user()->id)->where('status', 0)->latest()->first();
+        $this->totalMonitors = Monitor::where('user_id', Auth::user()->id)->count();
+        $this->totalUptime = User::find(Auth::user()->id)->uptimes()->sum('uptime_12h');
+        $this->totalDowntime = User::find(Auth::user()->id)->uptimes()->sum('downtime_12h');
     }
     public array $myChart = [
         'type' => 'line',
@@ -39,13 +47,13 @@ new class extends Component {
 }; ?>
 
 <div>
+    @section('title', 'Dashboard')
+    @include('components.flash.messages')
     <x-header title="Monitors - {{ $userName }}" separator progress-indicator>
     </x-header>
-    <x-card shadow>
-        <div class="grid grid-cols-2 gap-4">
-            <x-chart wire:model="myChart" />
-        </div>
-        <x-button wire:click="switch">Switch to {{ $myChart['type'] == 'bar' ? 'Pie' : 'Bar' }}</x-button>
-        <x-button wire:click="uptime">Uptime</x-button>
-    </x-card>
+    <div class="flex justify-between items-center">
+        <x-mary-card title="Total Monitors:" :value="$totalMonitors" icon="o-squares-plus" />
+        <x-mary-card title="Total Uptime:" :value="$totalUptime . ' hours'" icon="o-squares-plus" />
+        <x-mary-card title="Total Downtime:" :value="$totalDowntime . ' hours'" icon="o-squares-plus" />
+    </div>
 </div>

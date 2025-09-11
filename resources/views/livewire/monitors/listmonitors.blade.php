@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Monitor;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
@@ -40,7 +41,7 @@ new class extends Component {
 
     public function monitors()
     {
-        $query = Monitor::query();
+        $query = Monitor::query()->where('user_id', Auth::user()->id);
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('name', 'like', '%' . $this->search . '%')
