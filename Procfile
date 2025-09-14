@@ -1,0 +1,1 @@
+worker: php artisan queue:work --timeout=1000099 --tries=3 --queue=high,default

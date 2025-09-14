@@ -21,7 +21,8 @@ class Monitor extends Model
         'uptime_12h',
         'uptime_24h',
         'uptime_7d',
-        'uptime_30d'
+        'uptime_30d',
+        'downtime_12h'
     ];
     public function logs()
     {
@@ -50,6 +51,32 @@ class Monitor extends Model
         }else{
             $this->uptime_12h = $this->calculateUptimeForPeriod(12);
             Cache::put('monitor_'.$this->id.'_12h_' . $this->user_id, $this->uptime_12h, now()->addHours(12));
+        }
+        
+        // Calculate downtime for the last 12 hours
+        if(Cache::has('monitor_'.$this->id.'_downtime_12h_' . $this->user_id)){
+            $this->downtime_12h = Cache::get('monitor_'.$this->id.'_downtime_12h_' . $this->user_id);
+        }else{
+            // Calculate downtime in hours based on logs from the last 12 hours
+            $periodStart = now()->subHours(12);
+            $totalLogs = $this->logs()->where('created_at', '>=', $periodStart)->count();
+            
+            if ($totalLogs > 0) {
+                $failedLogs = $this->logs()
+                    ->where('created_at', '>=', $periodStart)
+                    ->where(function ($query) {
+                        $query->whereRaw('CAST(status AS INTEGER) < 200 OR CAST(status AS INTEGER) > 299');
+                    })
+                    ->count();
+                
+                // Calculate downtime in hours (assuming each check represents the interval period)
+                $interval = $this->interval ? intval($this->interval) : 5; // Default to 5 minutes if not set
+                $this->downtime_12h = ($failedLogs * $interval) / 60; // Convert minutes to hours
+            } else {
+                $this->downtime_12h = 0;
+            }
+            
+            Cache::put('monitor_'.$this->id.'_downtime_12h_' . $this->user_id, $this->downtime_12h, now()->addHours(12));
         }
         if(Cache::has('monitor_'.$this->id.'_24h_' . $this->user_id)){
             $this->uptime_24h = Cache::get('monitor_'.$this->id.'_24h_' . $this->user_id);
