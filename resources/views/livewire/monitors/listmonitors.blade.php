@@ -8,6 +8,7 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    public $polling = true;
     public $drawer = false;
     public array $sortBy = ['column' => 'status', 'direction' => 'asc'];
     public bool $myModal1 = false;
@@ -96,7 +97,7 @@ new class extends Component {
             <x-button label="Confirm" @click="$wire.delete()" />
         </x-slot:actions>
     </x-modal>
-    <x-header title="Monitors" separator progress-indicator>
+    <x-header title="Monitors" separator >
         <x-slot:middle class="!justify-end">
             <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </x-slot:middle>
@@ -139,7 +140,7 @@ new class extends Component {
     </div>
     @endif
     <x-card shadow>
-        <x-table :headers="$headers" :rows="$monitors" :sort-by="$sortBy" with-pagination>
+        <x-table :headers="$headers" :rows="$monitors" :sort-by="$sortBy" with-pagination wire:poll.5s>
             @scope('cell_name', $monitor)
             <div class="flex items-center">
                 <x-icon name="o-globe-alt" class="text-primary mr-2" />

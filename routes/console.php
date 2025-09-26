@@ -5,7 +5,7 @@ use App\Models\Monitor;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_30_seconds')->get();
+    $monitors = Monitor::where('interval', 0)->get();
     foreach ($monitors as $monitor) {
         dispatch(new CheckMonitor($monitor->id));
     }
@@ -24,6 +24,13 @@ Schedule::call(function () {
         dispatch(new CheckMonitor($monitor->id));
     }
 })->everyFiveMinutes();
+
+Schedule::call(function () {
+    $monitors = Monitor::where('interval', 1)->get();
+    foreach($monitors as $monitor) {
+        dispatch(new CheckMonitor($monitor->id));
+    }
+})->everyTenMinutes();
 
 Schedule::call(function () {
     $monitors = Monitor::where('interval', 'every_15_minutes')->get();

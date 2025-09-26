@@ -55,16 +55,16 @@ new class extends Component
         $userId = $user->id;
 
         $this->totalMonitors = Monitor::where('user_id', $userId)->count();
-        $this->totalDownMonitors = Monitor::where('user_id', $userId)->where('status', 0)->count();
-        $this->totalPausedMonitors = Monitor::where('user_id', $userId)->where('status', 1)->count();
+        $this->totalDownMonitors = Monitor::where('user_id', $userId)->where('status', 'down')->count();
+        $this->totalPausedMonitors = Monitor::where('user_id', $userId)->where('status', 'paused')->count();
 
         $this->lastDownMonitor = Monitor::where('user_id', $userId)
-            ->where('status', 0)
+            ->where('status', 'down')
             ->latest('updated_at')
             ->first();
 
-        $this->totalUptime = $user->uptimes()->sum('uptime_12h');
-        $this->totalDowntime = $user->uptimes()->sum('downtime_12h');
+        $this->totalUptime = $user->uptimes()->sum('uptime_12h') / $user->uptimes()->count('uptime_12h');
+        $this->totalDowntime = $user->uptimes()->sum('downtime_12h') / $user->uptimes()->count('downtime_12h');
 
         $this->loadUptimeChartData();
     }
@@ -128,9 +128,15 @@ new class extends Component
                     <i class="fas fa-exclamation-triangle text-red-300"></i>
                 </div>
             </div>
+            @if($lastDownMonitor)
+            <a href="{{route('edit-monitor', $lastDownMonitor->id)}}" class="text-3xl font-bold text-red-500">
+                {{ $lastDownMonitor->name }}
+            </a>
+            @else
             <p class="text-3xl font-bold text-red-500">
-                {{ $lastDownMonitor ? $lastDownMonitor->name : 'No recent downtime' }}
+                No recent downtime
             </p>
+            @endif
             <p class="text-sm text-gray-500">Most recent downtime occurrence</p>
         </div>
 

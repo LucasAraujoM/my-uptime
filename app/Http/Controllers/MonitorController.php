@@ -96,7 +96,7 @@ class MonitorController extends Controller
             // Create log entry
             $log = new ResponseLog();
             $log->monitor_id = $monitor->id;
-            $log->status = $response->status();
+            $log->status = $response->status() === 200 ? 'up' : 'down';
             $log->response_time = $response->transferStats->getTransferTime();
             $log->save(); // Save the log first to get an ID
             
