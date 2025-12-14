@@ -11,7 +11,7 @@ new class extends Component {
     public $polling = true;
     public $drawer = false;
     public array $sortBy = ['column' => 'status', 'direction' => 'asc'];
-    public bool $myModal1 = false;
+    public bool $deleteModal = false;
     public Monitor $monitorToDelete;
     public $m_name = '';
     public $search = '';
@@ -34,8 +34,10 @@ new class extends Component {
     {
         $count = 0;
 
-        if (!empty($this->search)) $count++;
-        if (!empty($this->statusFilters)) $count++;
+        if (!empty($this->search))
+            $count++;
+        if (!empty($this->statusFilters))
+            $count++;
 
         return $count;
     }
@@ -72,16 +74,16 @@ new class extends Component {
             'headers' => $this->headers()
         ];
     }
-    public function deleteModal(Monitor $monitor)
+    public function confirmDelete(Monitor $monitor)
     {
         $this->monitorToDelete = $monitor;
         $this->m_name = $monitor->name;
-        $this->myModal1 = true;
+        $this->deleteModal = true;
     }
     public function delete()
     {
         $this->monitorToDelete->delete();
-        $this->myModal1 = false;
+        $this->deleteModal = false;
     }
     public function edit($monitorId)
     {
@@ -90,94 +92,160 @@ new class extends Component {
 }; ?>
 
 <div>
-    <x-modal @close="$wire.myModal1 = false" wire:model="myModal1" title="Are you sure?" class="backdrop-blur text-start">
-        This change will permanently delete {{$m_name}}.
+    <x-modal wire:model="deleteModal" title="Confirm Deletion"
+        class="backdrop-blur-md bg-gray-900/90 border border-gray-800">
+        <div class="text-gray-300">
+            Are you sure you want to permanently delete the monitor <span
+                class="font-bold text-white">{{$m_name}}</span>?
+            <p class="text-sm text-gray-500 mt-2">This action cannot be undone and all historical logs will be lost.</p>
+        </div>
         <x-slot:actions>
-            <x-button label="Cancel" @click="$wire.myModal1 = false" />
-            <x-button label="Confirm" @click="$wire.delete()" />
+            <x-button label="Cancel" @click="$wire.deleteModal = false"
+                class="btn-ghost text-gray-400 hover:text-white" />
+            <x-button label="Delete Monitor" @click="$wire.delete()"
+                class="bg-red-500 hover:bg-red-600 border-none text-white" />
         </x-slot:actions>
     </x-modal>
-    <x-header title="Monitors" separator >
-        <x-slot:middle class="!justify-end">
-            <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
-        </x-slot:middle>
-        <x-slot:actions>
-            <x-button label="Reset Filters" icon="o-x-mark" wire:click="resetFilters" class="mr-2" :disabled="!$this->hasActiveFilters()" />
-            <x-dropdown label="Filters" icon="o-funnel" :class="$this->hasActiveFilters() ? 'text-primary' : ''">
-                @if($this->activeFilterCount() > 0)
-                <x-badge value="{{ $this->activeFilterCount() }}" class="absolute -top-1 -right-1" />
-                @endif
-                <x-menu-item @click.stop="">
-                    <x-checkbox label="Up" wire:model.live.debounce="statusFilters" value="up" />
-                </x-menu-item>
-                <x-menu-item @click.stop="">
-                    <x-checkbox label="Down" wire:model.live.debounce="statusFilters" value="down" />
-                </x-menu-item>
-                <x-menu-item @click.stop="">
-                    <x-checkbox label="Paused" wire:model.live.debounce="statusFilters" value="paused" />
-                </x-menu-item>
-                <x-menu-item @click.stop="">
-                    <x-checkbox label="Pending" wire:model.live.debounce="statusFilters" value="pending" />
-                </x-menu-item>
-            </x-dropdown>
-        </x-slot:actions>
-    </x-header>
-    @if($this->hasActiveFilters())
-    <div class="bg-base-200 p-2 rounded-lg mb-4 flex flex-wrap items-center">
-        <span class="mr-2 font-medium">Active filters:</span>
-        @if(!empty($this->statusFilters))
-        @foreach($this->statusFilters as $status)
-        <span class="mr-2 px-2 py-1 rounded-md bg-base-300 text-sm">
-            {{ ucfirst($status) }}
-        </span>
-        @endforeach
-        @endif
-        <div class="flex-grow"></div>
-        <div class="flex items-center">
-            <span class="text-sm mr-4">{{ $monitors->total() }} result(s) found</span>
-            <x-button icon="o-x-mark" size="xs" wire:click="resetFilters()" label="Clear all" />
+
+    <!-- Header & Controls -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Monitors</h1>
+            <p class="text-gray-400 text-sm mt-1">Manage and track your services.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <x-button label="Add Monitor" link="{{ route('add-monitor') }}" icon="o-plus"
+                class="bg-purple-600 hover:bg-purple-700 text-white border-none shadow-lg shadow-purple-900/20" />
         </div>
     </div>
-    @endif
-    <x-card shadow>
-        <x-table :headers="$headers" :rows="$monitors" :sort-by="$sortBy" with-pagination wire:poll.5s>
-            @scope('cell_name', $monitor)
-            <div class="flex items-center">
-                <x-icon name="o-globe-alt" class="text-primary mr-2" />
-                {{ $monitor->name }}
-            </div>
-            @endscope
 
-            @scope('cell_url', $monitor)
-            <div class="flex items-center">
-                <x-icon name="o-link" class="text-gray-400 mr-2" />
-                <a href="{{ $monitor->url }}" target="_blank" class="hover:underline text-primary">
-                    {{ $monitor->url }}
-                </a>
-            </div>
-            @endscope
+    <!-- Main Content -->
+    <div class="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6">
 
-            @scope('cell_status', $monitor)
-            <div class="flex items-center">
-                @if($monitor->status === 'up')
-                <x-icon name="o-check-circle" class="text-success mr-2" />
-                @elseif($monitor->status === 'down')
-                <x-icon name="o-x-circle" class="text-error mr-2" />
-                @elseif($monitor->status === 'pending')
-                <x-icon name="o-clock" class="text-warning mr-2" />
-                @elseif($monitor->status === 'paused')
-                <x-icon name="o-pause" class="text-gray-400 mr-2" />
+        <!-- Toolbar -->
+        <div class="flex flex-col md:flex-row gap-4 mb-6 justify-between items-center">
+            <div class="w-full md:w-72">
+                <x-input placeholder="Search monitors..." wire:model.live.debounce="search" clearable
+                    icon="o-magnifying-glass"
+                    class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500" />
+            </div>
+
+            <div class="flex items-center gap-2 w-full md:w-auto relative z-20">
+                <x-dropdown label="Filter Status" icon="o-funnel" right
+                    class="btn-ghost bg-gray-900/30 border border-gray-700/50 text-gray-300 hover:text-white hover:bg-gray-800 {{ $this->hasActiveFilters() ? 'text-purple-400 border-purple-500/30' : '' }}">
+
+                    @if($this->activeFilterCount() > 0)
+                        <x-badge value="{{ $this->activeFilterCount() }}"
+                            class="absolute -top-1 -right-1 bg-purple-500 text-white border-none scale-75" />
+                    @endif
+
+                    <div class="p-3 bg-gray-800 border border-gray-700 shadow-xl rounded-xl space-y-2 min-w-[200px]">
+                        <x-checkbox label="Operational (Up)" wire:model.live="statusFilters" value="up"
+                            class="checkbox-success" />
+                        <x-checkbox label="Downtime (Down)" wire:model.live="statusFilters" value="down"
+                            class="checkbox-error" />
+                        <x-checkbox label="Paused" wire:model.live="statusFilters" value="paused"
+                            class="checkbox-warning" />
+                        <x-checkbox label="Pending" wire:model.live="statusFilters" value="pending"
+                            class="checkbox-info" />
+                    </div>
+                </x-dropdown>
+
+                @if($this->hasActiveFilters())
+                    <x-button icon="o-x-mark" wire:click="resetFilters" class="btn-ghost text-gray-400 hover:text-white"
+                        tooltip="Clear Filters" />
                 @endif
-                {{ ucfirst($monitor->status) }}
             </div>
-            @endscope
+        </div>
 
-            @scope('actions', $monitor, $m_name )
-            <div class="flex">
-                <x-button icon="o-pencil" spinner class="btn-ghost btn-sm text-primary" wire:click="edit({{$monitor->id}})" />
-                <x-button icon="o-trash" wire:click="deleteModal({{ $monitor->id }})" spinner class="btn-ghost btn-sm text-error" />
+        <!-- Active Filters Display -->
+        @if($this->hasActiveFilters())
+            <div class="flex flex-wrap gap-2 mb-4 items-center animate-fade-in">
+                <span class="text-xs font-semibold text-gray-500 uppercase mr-1">Filtering by:</span>
+                @foreach($this->statusFilters as $status)
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-200 border border-gray-600">
+                        {{ ucfirst($status) }}
+                    </span>
+                @endforeach
+                @if($search)
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-200 border border-gray-600">
+                        Search: "{{ $search }}"
+                    </span>
+                @endif
             </div>
-            @endscope
-        </x-table>
-    </x-card>
+        @endif
+
+        <!-- Table -->
+        <div class="overflow-hidden rounded-xl border border-gray-700/50" wire:poll.30s>
+            <x-table :headers="$headers" :rows="$monitors" :sort-by="$sortBy" with-pagination wire:poll.5s
+                class="bg-gray-900/20 text-gray-300">
+
+                @scope('cell_name', $monitor)
+                <div class="flex items-center gap-3 py-1">
+                    <div
+                        class="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-800 border border-gray-700 shrink-0">
+                        @if($monitor->type === 'ping')
+                            <x-icon name="o-signal" class="w-4 h-4 text-orange-400" />
+                        @else
+                            <x-icon name="o-globe-alt" class="w-4 h-4 text-blue-400" />
+                        @endif
+                    </div>
+                    <div>
+                        <div class="font-medium text-white hover:text-purple-400 transition-colors cursor-pointer"
+                            wire:click="edit({{$monitor->id}})">
+                            {{ $monitor->name }}
+                        </div>
+                        <div class="text-xs text-gray-500">{{ strtoupper($monitor->type) }} • {{ $monitor->interval }}
+                        </div>
+                    </div>
+                </div>
+                @endscope
+
+                @scope('cell_url', $monitor)
+                <div class="flex items-center group">
+                    <x-icon name="o-arrow-top-right-on-square"
+                        class="w-3 h-3 text-gray-600 mr-2 group-hover:text-purple-400 transition-colors" />
+                    <a href="{{ $monitor->url }}" target="_blank"
+                        class="text-gray-400 hover:text-purple-400 hover:underline transition-colors truncate max-w-[200px] text-sm font-mono">
+                        {{ $monitor->url }}
+                    </a>
+                </div>
+                @endscope
+
+                @scope('cell_status', $monitor)
+                @php
+                    $color = match ($monitor->status) {
+                        'up' => 'success',
+                        'down' => 'error',
+                        'paused' => 'warning',
+                        default => 'info'
+                    };
+                    $bg = match ($monitor->status) {
+                        'up' => 'bg-green-500/10 text-green-400 border-green-500/20',
+                        'down' => 'bg-red-500/10 text-red-400 border-red-500/20',
+                        'paused' => 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+                        default => 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                    };
+                @endphp
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $bg }}">
+                    <span
+                        class="w-1.5 h-1.5 rounded-full bg-current mr-1.5 {{ $monitor->status === 'down' ? 'animate-pulse' : '' }}"></span>
+                    {{ ucfirst($monitor->status) }}
+                </span>
+                @endscope
+
+                @scope('actions', $monitor, $m_name)
+                <div class="flex justify-end gap-1">
+                    <x-button icon="o-pencil"
+                        class="btn-ghost btn-sm text-gray-500 hover:text-blue-400 hover:bg-blue-500/10"
+                        wire:click="edit({{$monitor->id}})" />
+                    <x-button icon="o-trash" wire:click="confirmDelete({{ $monitor->id }})"
+                        class="btn-ghost btn-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10" />
+                </div>
+                @endscope
+            </x-table>
+        </div>
+    </div>
 </div>

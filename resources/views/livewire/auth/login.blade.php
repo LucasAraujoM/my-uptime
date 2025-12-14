@@ -35,43 +35,54 @@ new class extends Component {
     }
 }; ?>
 @section('title', 'Login')
-<div class="max-w-md mx-auto mt-50 p-6 rounded shadow bg-base-300">
-    @include('components.flash.messages')
-    <form
-    wire:submit.prevent="login"
-    >
-        <x-mary-input 
-            label="Email" 
-            type="email" 
-            wire:model.defer="email" 
-            required 
-            autofocus 
-        />
-        
-        <x-mary-input 
-            label="Password" 
-            type="password" 
-            wire:model.defer="password" 
-            required 
-        />
-        
-        <div class="mt-4 flex items-center">
-            <x-checkbox wire:model="remember" />
-            <label for="remember" class="ml-2 text-sm text-gray-600 cursor-pointer">
-                Remember Me
-            </label>
+<div class="flex items-center justify-center min-h-[calc(100vh-100px)]">
+    <div
+        class="w-full max-w-md p-8 rounded-2xl bg-gray-900/40 backdrop-blur-xl border border-gray-700/50 shadow-2xl relative">
+        <div class="text-center mb-8">
+            <div
+                class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-purple-900/20 mx-auto mb-6">
+                M
+            </div>
+            <h2 class="text-3xl font-bold text-white tracking-tight"
+                style="font-family: 'Instrument Sans', sans-serif;">Welcome Back</h2>
+            <p class="text-gray-400 mt-2">Sign in to your dashboard</p>
         </div>
-        
-        <x-mary-button type="submit" class="mt-4 w-full">
-            Login
-        </x-mary-button>
-    </form>
-    <div class="mt-4">
-        <p class="text-center text-sm text-gray-600 mb-4">
-            Don't have an account?
-        </p>
-        <x-mary-button class=" w-full" link="{{route('register')}}">
-            Register
-        </x-mary-button>
+
+        @include('components.flash.messages')
+
+        <form wire:submit.prevent="login" class="space-y-6">
+            <x-input label="Email" icon="o-envelope" type="email" wire:model="email" required autofocus
+                class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500" />
+
+            <x-input label="Password" icon="o-key" type="password" wire:model="password" required
+                class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500" />
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <x-checkbox wire:model="remember" label="Remember Me" class="checkbox-primary text-gray-300" />
+                </div>
+                <a href="#" class="text-sm font-medium text-purple-400 hover:text-purple-300 transition-colors">Forgot
+                    Password?</a>
+            </div>
+
+            <x-button type="submit" label="Sign In" icon="o-arrow-right"
+                class="w-full bg-purple-600 hover:bg-purple-700 text-white border-none shadow-lg shadow-purple-900/20"
+                spinner="login" />
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-gray-700/50 text-center">
+            <p class="text-sm text-gray-400 mb-4">
+                Don't have an account?
+            </p>
+            <x-button link="{{ route('register') }}" label="Create Account"
+                class="w-full btn-ghost text-white border border-gray-700 hover:bg-gray-800" />
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="/"
+                class="text-gray-500 hover:text-gray-300 text-sm transition-colors flex items-center justify-center gap-2">
+                <x-icon name="o-arrow-left" class="w-4 h-4" /> Back to Home
+            </a>
+        </div>
     </div>
 </div>

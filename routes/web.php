@@ -19,10 +19,16 @@ Route::group(['middleware' => 'auth'], function () {
         session()->regenerateToken();
         return redirect()->route('login')->with('success', 'You have been logged out.')->with('timeout', 10);
     })->name('logout');
-    Volt::route('/users', 'auth.index');
+
+    Volt::route('/users', 'auth.index')->name('users');
+    Volt::route('/team', 'auth.index')->name('team'); // Alias for users
+
     Volt::route('/dashboard', 'dashboard')->name('dashboard');
-    Volt::route('/monitors', 'monitors.listmonitors');
-    Volt::route('/monitor/add', 'monitors.monitor');
+    Volt::route('/monitors', 'monitors.listmonitors')->name('monitors');
+    Volt::route('/monitor/add', 'monitors.monitor')->name('add-monitor');
     Volt::route('/monitor/edit/{id}', 'monitors.monitor')->name('edit-monitor');
+
+    Volt::route('/incidents', 'incidents')->name('incidents');
+    Volt::route('/alert-settings', 'alert-settings')->name('alert-settings');
 });
 //Volt::route('/monitor/delete/{id}','monitors.delete');

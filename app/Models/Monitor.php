@@ -4,7 +4,8 @@ namespace App\Models;
 
 use App\Http\Controllers\MonitorController;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
+
+use Illuminate\Support\Facades\Log as Logger;
 
 class Monitor extends Model
 {
@@ -22,8 +23,15 @@ class Monitor extends Model
         'uptime_24h',
         'uptime_7d',
         'uptime_30d',
-        'downtime_12h'
+        'downtime_12h',
+        'downtime_24h',
+        'downtime_7d',
+        'downtime_30d'
     ];
+    public function isPaused()
+    {
+        return $this->status == 'paused';
+    }
     public function logs()
     {
         return $this->hasMany(Log::class);
@@ -34,90 +42,94 @@ class Monitor extends Model
     }
     public function pause()
     {
-        if($this->status == 'paused'){
+        if ($this->status == 'paused') {
             $this->status = 'pending';
             $this->save();
             MonitorController::checkStatus($this->id);
-        }else{
+        } else {
             $this->status = 'paused';
             $this->save();
         }
     }
-    
+
+
     public function calculateUptime()
     {
-        if(Cache::has('monitor_'.$this->id.'_12h_' . $this->user_id)){
-            $this->uptime_12h = Cache::get('monitor_'.$this->id.'_12h_' . $this->user_id);
-        }else{
-            $this->uptime_12h = $this->calculateUptimeForPeriod(12);
-            Cache::put('monitor_'.$this->id.'_12h_' . $this->user_id, $this->uptime_12h, now()->addHours(12));
+        // Define all periods to calculate (in hours)
+        $periods = [
+            '12h' => 12,
+            '24h' => 24,
+            '7d' => 24 * 7,
+            '30d' => 24 * 30,
+        ];
+
+        foreach ($periods as $periodKey => $hours) {
+            $this->calculateUptimeAndDowntimeForPeriod($periodKey, $hours);
         }
-        
-        // Calculate downtime for the last 12 hours
-        if(Cache::has('monitor_'.$this->id.'_downtime_12h_' . $this->user_id)){
-            $this->downtime_12h = Cache::get('monitor_'.$this->id.'_downtime_12h_' . $this->user_id);
-        }else{
-            // Calculate downtime in hours based on logs from the last 12 hours
-            $periodStart = now()->subHours(12);
-            $totalLogs = $this->logs()->where('created_at', '>=', $periodStart)->count();
-            
-            if ($totalLogs > 0) {
-                $failedLogs = $this->logs()
-                    ->where('created_at', '>=', $periodStart)
-                    ->where(function ($query) {
-                        $query->whereRaw('CAST(status AS INTEGER) < 200 OR CAST(status AS INTEGER) > 299');
-                    })
-                    ->count();
-                
-                // Calculate downtime in hours (assuming each check represents the interval period)
-                $interval = $this->interval ? intval($this->interval) : 5; // Default to 5 minutes if not set
-                $this->downtime_12h = ($failedLogs * $interval) / 60; // Convert minutes to hours
-            } else {
-                $this->downtime_12h = 0;
-            }
-            
-            Cache::put('monitor_'.$this->id.'_downtime_12h_' . $this->user_id, $this->downtime_12h, now()->addHours(12));
-        }
-        if(Cache::has('monitor_'.$this->id.'_24h_' . $this->user_id)){
-            $this->uptime_24h = Cache::get('monitor_'.$this->id.'_24h_' . $this->user_id);
-        }else{
-            $this->uptime_24h = $this->calculateUptimeForPeriod(24);
-            Cache::put('monitor_'.$this->id.'_24h', $this->uptime_24h, now()->addHours(24));
-        }
-        if(Cache::has('monitor_'.$this->id.'_7d_' . $this->user_id)){
-            $this->uptime_7d = Cache::get('monitor_'.$this->id.'_7d_' . $this->user_id);
-        }else{
-            $this->uptime_7d = $this->calculateUptimeForPeriod(24 * 7);
-            Cache::put('monitor_'.$this->id.'_7d_' . $this->user_id, $this->uptime_7d, now()->addHours(24 * 7));
-        }
-        if(Cache::has('monitor_'.$this->id.'_30d_' . $this->user_id)){
-            $this->uptime_30d = Cache::get('monitor_'.$this->id.'_30d_' . $this->user_id);
-        }else{
-            $this->uptime_30d = $this->calculateUptimeForPeriod(24 * 30);
-            Cache::put('monitor_'.$this->id.'_30d_' . $this->user_id, $this->uptime_30d, now()->addHours(24 * 30));
-        }
+
         $this->save();
     }
-    
+
+    /**
+     * Calculate uptime and downtime percentages for a specific period
+     * 
+     * @param string $periodKey The period identifier (e.g., '12h', '24h', '7d', '30d')
+     * @param int $hours Number of hours for the period
+     * @return void
+     */
+    protected function calculateUptimeAndDowntimeForPeriod(string $periodKey, int $hours): void
+    {
+        $uptimeField = "uptime_{$periodKey}";
+        $downtimeField = "downtime_{$periodKey}";
+
+        $uptimePercentage = $this->calculateUptimeForPeriod($hours);
+        $this->$uptimeField = $uptimePercentage;
+
+        $downtimePercentage = $this->calculateDowntimeForPeriod($hours);
+        $this->$downtimeField = $downtimePercentage;
+    }
+
     protected function calculateUptimeForPeriod($hours)
     {
         $periodStart = now()->subHours($hours);
-        
+
         $totalLogs = $this->logs()
             ->where('created_at', '>=', $periodStart)
             ->count();
-            
         if ($totalLogs === 0) {
             return 0;
         }
-        
+
         $successfulLogs = $this->logs()
             ->where('created_at', '>=', $periodStart)
-            ->where(function ($query) {
-                $query->whereRaw('CAST(status AS INTEGER) >= 200 AND CAST(status AS INTEGER) <= 299');
-            })
+            ->where('status', 'up')
             ->count();
-            
         return ($successfulLogs / $totalLogs) * 100;
+    }
+
+    /**
+     * Calculate downtime percentage for a specific period
+     * 
+     * @param int $hours Number of hours for the period
+     * @return float Downtime percentage (0-100)
+     */
+    protected function calculateDowntimeForPeriod(int $hours): float
+    {
+        $periodStart = now()->subHours($hours);
+
+        $totalLogs = $this->logs()
+            ->where('created_at', '>=', $periodStart)
+            ->count();
+
+        if ($totalLogs === 0) {
+            return 0;
+        }
+
+        $failedLogs = $this->logs()
+            ->where('created_at', '>=', $periodStart)
+            ->where('status', 'down')
+            ->count();
+
+        return ($failedLogs / $totalLogs) * 100;
     }
 }

@@ -1,119 +1,59 @@
 <?php
 
+use App\Jobs\CalculateUptime;
 use App\Jobs\CheckMonitor;
 use App\Models\Monitor;
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 0)->get();
-    foreach ($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyThirtySeconds();
+// Map of interval IDs to Laravel schedule methods
+$monitorSchedules = [
+    '0' => 'everyThirtySeconds',
+    '1' => 'everyMinute',
+    '2' => 'everyFiveMinutes',
+    '3' => 'everyTenMinutes',
+    '4' => 'everyFifteenMinutes',
+    '5' => 'everyThirtyMinutes',
+    '6' => 'hourly',
+    '7' => 'everyTwoHours',
+    '8' => 'everyThreeHours',
+    '9' => 'everyFourHours',
+    '10' => 'everyFiveHours',
+    '11' => 'everySixHours',
+    '12' => 'everyTwelveHours',
+    '13' => 'daily',
+];
 
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_1_minute')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyMinute();
+// Schedule monitor checks based on their intervals
+foreach ($monitorSchedules as $intervalId => $scheduleMethod) {
+    $schedule = Schedule::call(function () use ($intervalId) {
+        $monitors = Monitor::where('interval', $intervalId)
+            ->where('status', '!=', 'paused')
+            ->get();
+        foreach ($monitors as $monitor) {
+            CheckMonitor::dispatch($monitor->id);
+        }
+    });
 
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_5_minutes')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
+    // Apply the appropriate schedule method
+    if ($scheduleMethod === 'everyFiveHours') {
+        // everyFiveHours doesn't exist in Laravel, use cron instead
+        $schedule->cron('0 */5 * * *');
+    } elseif ($scheduleMethod === 'everyTwelveHours') {
+        // everyTwelveHours doesn't exist in Laravel, use cron instead
+        $schedule->cron('0 */12 * * *');
+    } else {
+        $schedule->$scheduleMethod();
     }
-})->everyFiveMinutes();
+}
 
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 1)->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyTenMinutes();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_15_minutes')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyFifteenMinutes();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_30_minutes')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyThirtyMinutes();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_1_hour')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->hourly();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_2_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyTwoHours();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_2_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyTwoHours();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_3_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyThreeHours();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_4_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyFourHours();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_5_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyOddHour(5);
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_6_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everySixHours();
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_12_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->everyOddHour(12);
-
-Schedule::call(function () {
-    $monitors = Monitor::where('interval', 'every_24_hours')->get();
-    foreach($monitors as $monitor) {
-        dispatch(new CheckMonitor($monitor->id));
-    }
-})->daily();
-
+// Purge old response logs daily
 Schedule::command('logs:purge-responses')->dailyAt('03:00');
 
+// Calculate uptime statistics hourly
 Schedule::call(function () {
     $monitors = Monitor::all();
-    foreach($monitors as $monitor) {
-        $monitor->calculateUptime();
+    foreach ($monitors as $monitor) {
+        CalculateUptime::dispatch($monitor->id);
     }
-})->hourly();
+    Log::info("Uptime calculated for: " . $monitors->count() . " monitors");
+})->everyMinute();

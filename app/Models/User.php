@@ -52,8 +52,13 @@ class User extends Authenticatable
     }
     public function uptimes()
     {
-        $uptimes = Monitor::where('user_id', $this->id)
-            ->select('id', 'created_at', 'uptime_12h', 'uptime_24h', 'uptime_7d', 'uptime_30d', 'downtime_12h');
-        return $uptimes;
+        return Monitor::where('user_id', $this->id)
+            ->select('id', 'created_at', 'uptime_12h', 'uptime_24h', 'uptime_7d', 'uptime_30d');
+    }
+
+    public function downtimes()
+    {
+        return Monitor::where('user_id', $this->id)
+            ->select('id', 'created_at', 'downtime_12h', 'downtime_24h', 'downtime_7d', 'downtime_30d');
     }
 }
