@@ -55,5 +55,4 @@ Schedule::call(function () {
     foreach ($monitors as $monitor) {
         CalculateUptime::dispatch($monitor->id);
     }
-    Log::info("Uptime calculated for: " . $monitors->count() . " monitors");
 })->everyMinute();
