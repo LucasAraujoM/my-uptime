@@ -103,7 +103,11 @@ new class extends Component {
             'url' => 'required|url',
             'type' => 'required|in:http,ping',
             'interval' => 'required',
-            'body.body' => 'nullable|json',
+            'body.*.body' => 'nullable|json',
+        ];
+
+        $messages = [
+            'body.*.body.json' => 'The body field must be a valid JSON string.',
         ];
 
         // Only require keyword if condition is set to check for keyword
@@ -111,7 +115,7 @@ new class extends Component {
             $validationRules['keyword'] = 'required';
         }
 
-        $this->validate($validationRules);
+        $this->validate($validationRules, $messages);
 
         try {
             if (isset($this->id)) {
@@ -163,16 +167,15 @@ new class extends Component {
             if (!empty($this->body)) {
                 foreach ($this->body as $key => $value) {
                     if (empty($value['body'])) {
+                        Body::where('monitor_id', $monitor->id)->delete();
                         continue;
                     }
                     Body::updateOrCreate([
                         'id' => $value['id'] ?? null,
                         'monitor_id' => $monitor->id,
-                        'body' => $value['body']
+                        'body' => $value['body'] ?? ''
                     ]);
                 }
-            } else {
-                Body::where('monitor_id', $monitor->id)->delete();
             }
             CheckMonitor::dispatch($monitor->id);
             $message = isset($this->id) ? 'Monitor updated successfully!' : 'Monitor created successfully!';
@@ -401,7 +404,7 @@ new class extends Component {
                             @if(!$body)
                                 <div class="col-span-1 md:col-span-2 flex justify-start mt-2">
                                     <x-button label="Add Body" icon="o-plus" class="btn-ghost text-purple-400"
-                                        wire:click="addBody" />
+                                        wire:click="addBody" wire:loading.attr="disabled" />
                                 </div>
                             @endif
                         </div>
@@ -503,81 +506,80 @@ new class extends Component {
                 </div>
 
                 <div class="h-80 relative w-full" x-data="{
-                        chart: null,
-                        init() {
-                        const ctx = this.$refs.canvas.getContext('2d');
-                        // Gradients
-                        const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
-                        gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
-                        gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
-                        this.chart = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: @js($chartLabels),
-                                datasets: [
-                                    {
-                                        label: 'Response Time (ms)',
-                                        backgroundColor: gradientUp,
-                                        borderColor: '#a855f7',
-                                        borderWidth: 2,
-                                        data: @js($chartData),
-                                        fill: true,
-                                        tension: 0.4,
-                                        pointRadius: 0,
-                                        pointHoverRadius: 4
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                interaction: {
-                                    mode: 'index',
-                                    intersect: false,
-                                },
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    },
-                                    tooltip: {
-                                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                                        titleColor: '#fff',
-                                        bodyColor: '#cbd5e1',
-                                        borderColor: 'rgba(255,255,255,0.1)',
-                                        borderWidth: 1,
-                                        padding: 10,
-                                        displayColors: true,
-                                        usePointStyle: true,
-                                        callbacks: {
-                                            label: function(context) {
-                                                return context.parsed.y + ' ms';
-                                            }
-                                        }
-                                    }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
-                                    },
-                                    x: {
-                                        grid: { display: false },
-                                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
-                                    }
-                                }
-                            }
-                        });
-
-                               Livewire.on('chart-updated', (data) => {
-                                   if (this.chart) {
-                                       this.chart.data.labels = data[0].labels;
-                                       this.chart.data.datasets[0].data = data[0].data;
-                                       this.chart.update();
-                                   }
-                               });
-                           }
-                        }" wire:ignore>
+    chart: null,
+    init() {
+    const ctx = this.$refs.canvas.getContext('2d');
+    // Gradients
+    const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
+    gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    this.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: @js($chartLabels),
+            datasets: [
+                {
+                    label: 'Response Time (ms)',
+                    backgroundColor: gradientUp,
+                    borderColor: '#a855f7',
+                    borderWidth: 2,
+                    data: @js($chartData),
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#cbd5e1',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: true,
+                    usePointStyle: true,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' ms';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                }
+            }
+        }
+    });
+           Livewire.on('chart-updated', (data) => {
+               if (this.chart) {
+                   this.chart.data.labels = data[0].labels;
+                   this.chart.data.datasets[0].data = data[0].data;
+                   this.chart.update();
+               }
+           });
+       }
+    }" wire:ignore>
                     <canvas x-ref="canvas"></canvas>
                 </div>
                 <!-- Custom Legend -->
