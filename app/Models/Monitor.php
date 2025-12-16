@@ -40,6 +40,14 @@ class Monitor extends Model
     {
         return $this->hasMany(Header::class);
     }
+    public function parameters()
+    {
+        return $this->hasMany(Parameter::class);
+    }
+    public function body()
+    {
+        return $this->hasMany(Body::class);
+    }
     public function pause()
     {
         if ($this->status == 'paused') {

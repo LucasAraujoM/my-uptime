@@ -6,6 +6,7 @@ use App\Models\Monitor;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Log;
 
 class AlertMessage implements ShouldQueue
 {
@@ -42,7 +43,7 @@ class AlertMessage implements ShouldQueue
                 if (!$webhookUrl) {
                     return;
                 }
-
+                //monitor down
                 $embed = [
                     'title' => 'Monitor Down: ' . $monitor->name,
                     'description' => "The monitor for **{$monitor->name}** ({$monitor->url}) is currently down. Link to monitor: " . route('edit-monitor', $monitor->id),
@@ -68,8 +69,30 @@ class AlertMessage implements ShouldQueue
             } else {
                 $users = User::all();
                 foreach ($users as $user) {
-                    $monitors = Monitor::where('user_id', $user->id);
+                    $monitors = Monitor::where('user_id', $user->id)->where('status', 'up')->count();
+                    Log::info('User ' . $user->id . ' has ' . $monitors . ' monitors');
+                    $embed = [
+                        'title' => 'All monitors are up',
+                        'description' => "All monitors for **{$user->name}** are currently up.",
+                        'color' => 65280, // Green
+                        'fields' => [
+                            [
+                                'name' => 'Time',
+                                'value' => now()->toDateTimeString(),
+                                'inline' => true
+                            ],
+                            [
+                                'name' => 'Status',
+                                'value' => 'UP',
+                                'inline' => true
+                            ]
+                        ],
+                        'timestamp' => now()->toIso8601String()
+                    ];
 
+                    /* \Illuminate\Support\Facades\Http::post($webhookUrl, [
+                        'embeds' => [$embed]
+                    ]); */
                 }
             }
         }

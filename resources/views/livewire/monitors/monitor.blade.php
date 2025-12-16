@@ -2,6 +2,9 @@
 
 use App\Models\Log;
 use App\Models\Monitor;
+use App\Models\Header;
+use App\Models\Parameter;
+use App\Models\Body;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
@@ -29,6 +32,9 @@ new class extends Component {
         ['id' => 'http', 'name' => 'HTTP'],
         ['id' => 'ping', 'name' => 'Ping']
     ];
+    public array $headers = [];
+    public array $parameters = [];
+    public array $body = [];
     public array $chartLabels = [];
     public array $chartData = [];
     public Monitor $monitor;
@@ -50,7 +56,9 @@ new class extends Component {
             $this->interval = $this->monitor->interval;
             $this->condition = $this->monitor->condition ?? '';
             $this->timeout = $this->monitor->timeout ?? '';
-
+            $this->headers = $this->monitor->headers()->get()->toArray();
+            $this->parameters = $this->monitor->parameters()->get()->toArray();
+            $this->body = $this->monitor->body()->get()->toArray();
             $this->loadChartData();
         }
     }
@@ -72,7 +80,7 @@ new class extends Component {
         $query = Log::where('monitor_id', $this->id)->orderBy('created_at', 'desc')->paginate(10);
         return $query;
     }
-    public function headers()
+    public function logHeaders()
     {
         return [
             ['key' => 'id', 'label' => '#', 'class' => 'hidden'],
@@ -85,7 +93,7 @@ new class extends Component {
     {
         return [
             'logs' => $this->logs(),
-            'headers' => $this->headers()
+            'logHeaders' => $this->logHeaders()
         ];
     }
     public function save()
@@ -94,7 +102,8 @@ new class extends Component {
             'name' => 'required',
             'url' => 'required|url',
             'type' => 'required|in:http,ping',
-            'interval' => 'required'
+            'interval' => 'required',
+            'body.body' => 'nullable|json',
         ];
 
         // Only require keyword if condition is set to check for keyword
@@ -121,7 +130,50 @@ new class extends Component {
             $monitor->keyword = $this->keyword;
             $monitor->timeout = $this->timeout;
             $monitor->save();
-
+            if (!empty($this->headers)) {
+                foreach ($this->headers as $key => $value) {
+                    if (empty($value['key']) || empty($value['value'])) {
+                        continue;
+                    }
+                    Header::updateOrCreate([
+                        'id' => $value['id'] ?? null,
+                        'monitor_id' => $monitor->id,
+                        'key' => $value['key'],
+                        'value' => $value['value']
+                    ]);
+                }
+            } else {
+                Header::where('monitor_id', $monitor->id)->delete();
+            }
+            if (!empty($this->parameters)) {
+                foreach ($this->parameters as $key => $value) {
+                    if (empty($value['key']) || empty($value['value'])) {
+                        continue;
+                    }
+                    Parameter::updateOrCreate([
+                        'id' => $value['id'] ?? null,
+                        'monitor_id' => $monitor->id,
+                        'key' => $value['key'],
+                        'value' => $value['value']
+                    ]);
+                }
+            } else {
+                Parameter::where('monitor_id', $monitor->id)->delete();
+            }
+            if (!empty($this->body)) {
+                foreach ($this->body as $key => $value) {
+                    if (empty($value['body'])) {
+                        continue;
+                    }
+                    Body::updateOrCreate([
+                        'id' => $value['id'] ?? null,
+                        'monitor_id' => $monitor->id,
+                        'body' => $value['body']
+                    ]);
+                }
+            } else {
+                Body::where('monitor_id', $monitor->id)->delete();
+            }
             CheckMonitor::dispatch($monitor->id);
             $message = isset($this->id) ? 'Monitor updated successfully!' : 'Monitor created successfully!';
             session()->flash('message', $message);
@@ -137,6 +189,33 @@ new class extends Component {
     public function redirectBack()
     {
         return redirect('/monitors');
+    }
+    public function addHeader()
+    {
+        $this->headers[] = ['key' => '', 'value' => ''];
+    }
+    public function removeHeader($index)
+    {
+        unset($this->headers[$index]);
+        $this->headers = array_values($this->headers);
+    }
+    public function addParameter()
+    {
+        $this->parameters[] = ['key' => '', 'value' => ''];
+    }
+    public function removeParameter($index)
+    {
+        unset($this->parameters[$index]);
+        $this->parameters = array_values($this->parameters);
+    }
+    public function addBody()
+    {
+        $this->body[] = ['body' => ''];
+    }
+    public function removeBody($index)
+    {
+        unset($this->body[$index]);
+        $this->body = array_values($this->body);
     }
 }; ?>
 
@@ -167,7 +246,7 @@ new class extends Component {
         <div class="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 mb-8">
             <h2 class="text-lg font-semibold text-white mb-4">Uptime History</h2>
             <!-- Visual Status Bar -->
-            <div class="w-full h-8 flex overflow-hidden rounded-lg border border-gray-700/50 bg-gray-900/50" wire:poll.30s>
+            <div class="w-full h-8 flex overflow-hidden rounded-lg border border-gray-700/50 bg-gray-900/50" wire:poll.10s>
                 @foreach($logs as $log)
                     @php
                         $colorClass = match ($log->status) {
@@ -250,6 +329,82 @@ new class extends Component {
                                     class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500" />
                             </div>
                         </div>
+                        <!-- Headers -->
+                        <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-gray-700/30 bg-gray-900/20"
+                            x-show="$wire.type === 'http'" x-transition>
+
+                            <div class="col-span-1 md:col-span-2 mb-2">
+                                <span class="text-sm font-semibold text-gray-300">Headers</span>
+                            </div>
+
+                            @foreach ($headers as $index => $header)
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                    <x-input placeholder="Key" wire:model="headers.{{ $index }}.key"
+                                        class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 " />
+                                    <x-input placeholder="Value" wire:model="headers.{{ $index }}.value"
+                                        class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500" />
+                                </div>
+                                @if (count($headers) >= 1)
+                                    <div class="col-span-2 flex justify-end">
+                                        <x-button icon="o-trash" class="btn-ghost text-red-500"
+                                            wire:click="removeHeader({{ $index }})" />
+                                    </div>
+                                @endif
+                            @endforeach
+                            <div class="col-span-1 md:col-span-2 flex justify-start mt-2">
+                                <x-button label="Add Header" icon="o-plus" class="btn-ghost text-purple-400"
+                                    wire:click="addHeader" />
+                            </div>
+                        </div>
+                        <!-- Parameters -->
+                        <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-gray-700/30 bg-gray-900/20"
+                            x-show="$wire.type === 'http'" x-transition>
+                            <div class="col-span-1 md:col-span-2 mb-2">
+                                <span class="text-sm font-semibold text-gray-300">Parameters</span>
+                            </div>
+                            @foreach ($parameters as $index => $parameter)
+                                <div class="col-span-2 grid grid-cols-2 gap-4">
+                                    <x-input placeholder="Key" wire:model="parameters.{{ $index }}.key"
+                                        class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 " />
+                                    <x-input placeholder="Value" wire:model="parameters.{{ $index }}.value"
+                                        class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500" />
+                                </div>
+                                @if (count($parameters) >= 1)
+                                    <div class="col-span-2 flex justify-end">
+                                        <x-button icon="o-trash" class="btn-ghost text-red-500"
+                                            wire:click="removeParameter({{ $index }})" />
+                                    </div>
+                                @endif
+                            @endforeach
+                            <div class="col-span-1 md:col-span-2 flex justify-start mt-2">
+                                <x-button label="Add Parameter" icon="o-plus" class="btn-ghost text-purple-400"
+                                    wire:click="addParameter" />
+                            </div>
+                        </div>
+                        <!-- Body -->
+                        <div class="col-span-1 md:col-span-2 md:grid-cols-2 gap-6 p-4 rounded-xl border border-gray-700/30 bg-gray-900/20"
+                            x-show="$wire.type === 'http'" x-transition>
+                            <div class="col-span-1 md:col-span-2 mb-2">
+                                <span class="text-sm font-semibold text-gray-300">Body</span>
+                            </div>
+                            @foreach ($body as $index => $value)
+                                <x-textarea wire:model="body.{{ $index }}.body" rows="10"
+                                    class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                    placeholder='
+                                    {
+                                        "userId": 1,
+                                        "id": 1,
+                                        "title": "delectus aut autem",
+                                        "completed": false
+                                    }' />
+                            @endforeach
+                            @if(!$body)
+                                <div class="col-span-1 md:col-span-2 flex justify-start mt-2">
+                                    <x-button label="Add Body" icon="o-plus" class="btn-ghost text-purple-400"
+                                        wire:click="addBody" />
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     <x-slot:actions>
@@ -275,7 +430,7 @@ new class extends Component {
                 <div class="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 h-fit">
                     <h3 class="text-lg font-semibold text-white mb-4">Recent Logs</h3>
                     <div class="rounded-xl overflow-hidden border border-gray-700/50">
-                        <x-table :headers="$headers" :rows="$logs" with-pagination wire:poll.30s
+                        <x-table :headers="$logHeaders" :rows="$logs" with-pagination wire:poll.30s
                             class="bg-gray-900/20 text-gray-300 text-sm">
 
                             @scope('cell_status', $log)
@@ -348,84 +503,81 @@ new class extends Component {
                 </div>
 
                 <div class="h-80 relative w-full" x-data="{
-                                                                                                                chart: null,
-                                                                                                                init() {
-                                                                                                                    const ctx = this.$refs.canvas.getContext('2d');
+                        chart: null,
+                        init() {
+                        const ctx = this.$refs.canvas.getContext('2d');
+                        // Gradients
+                        const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
+                        gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
+                        gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
+                        this.chart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: @js($chartLabels),
+                                datasets: [
+                                    {
+                                        label: 'Response Time (ms)',
+                                        backgroundColor: gradientUp,
+                                        borderColor: '#a855f7',
+                                        borderWidth: 2,
+                                        data: @js($chartData),
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 0,
+                                        pointHoverRadius: 4
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false,
+                                },
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                        titleColor: '#fff',
+                                        bodyColor: '#cbd5e1',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        borderWidth: 1,
+                                        padding: 10,
+                                        displayColors: true,
+                                        usePointStyle: true,
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.parsed.y + ' ms';
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                                    }
+                                }
+                            }
+                        });
 
-                                                                                                                    // Gradients
-                                                                                                                    const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
-                                                                                                                    gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
-                                                                                                                    gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
-
-                                                                                                                    this.chart = new Chart(ctx, {
-                                                                                                                        type: 'line',
-                                                                                                                        data: {
-                                                                                                                            labels: @js($chartLabels),
-                                                                                                                            datasets: [
-                                                                                                                                {
-                                                                                                                                    label: 'Response Time (ms)',
-                                                                                                                                    backgroundColor: gradientUp,
-                                                                                                                                    borderColor: '#a855f7',
-                                                                                                                                    borderWidth: 2,
-                                                                                                                                    data: @js($chartData),
-                                                                                                                                    fill: true,
-                                                                                                                                    tension: 0.4,
-                                                                                                                                    pointRadius: 0,
-                                                                                                                                    pointHoverRadius: 4
-                                                                                                                                }
-                                                                                                                            ]
-                                                                                                                        },
-                                                                                                                        options: {
-                                                                                                                            responsive: true,
-                                                                                                                            maintainAspectRatio: false,
-                                                                                                                            interaction: {
-                                                                                                                                mode: 'index',
-                                                                                                                                intersect: false,
-                                                                                                                            },
-                                                                                                                            plugins: {
-                                                                                                                                legend: {
-                                                                                                                                    display: false
-                                                                                                                                },
-                                                                                                                                tooltip: {
-                                                                                                                                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                                                                                                                                    titleColor: '#fff',
-                                                                                                                                    bodyColor: '#cbd5e1',
-                                                                                                                                    borderColor: 'rgba(255,255,255,0.1)',
-                                                                                                                                    borderWidth: 1,
-                                                                                                                                    padding: 10,
-                                                                                                                                    displayColors: true,
-                                                                                                                                    usePointStyle: true,
-                                                                                                                                    callbacks: {
-                                                                                                                                        label: function(context) {
-                                                                                                                                            return context.parsed.y + ' ms';
-                                                                                                                                        }
-                                                                                                                                    }
-                                                                                                                                }
-                                                                                                                            },
-                                                                                                                            scales: {
-                                                                                                                                y: {
-                                                                                                                                    beginAtZero: true,
-                                                                                                                                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                                                                                                                                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
-                                                                                                                                },
-                                                                                                                                x: {
-                                                                                                                                    grid: { display: false },
-                                                                                                                                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
-                                                                                                                                }
-                                                                                                                            }
-                                                                                                                        }
-                                                                                                                    });
-
-                                                                                                                    Livewire.on('chart-updated', (data) => {
-                                                                                                                        if (this.chart) {
-                                                                                                                            this.chart.data.labels = data[0].labels;
-                                                                                                                            this.chart.data.datasets[0].data = data[0].data;
-                                                                                                                            this.chart.update();
-                                                                                                                        }
-                                                                                                                    });
-                                                                                                                }
-                                                                                                             }"
-                    wire:ignore>
+                               Livewire.on('chart-updated', (data) => {
+                                   if (this.chart) {
+                                       this.chart.data.labels = data[0].labels;
+                                       this.chart.data.datasets[0].data = data[0].data;
+                                       this.chart.update();
+                                   }
+                               });
+                           }
+                        }" wire:ignore>
                     <canvas x-ref="canvas"></canvas>
                 </div>
                 <!-- Custom Legend -->

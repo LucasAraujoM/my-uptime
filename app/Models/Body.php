@@ -4,12 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Header extends Model
+class Body extends Model
 {
     protected $fillable = [
         'monitor_id',
-        'key',
-        'value',
+        'body',
     ];
     public function monitor()
     {

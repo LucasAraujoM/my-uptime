@@ -16,6 +16,16 @@ new class extends Component {
 }; ?>
 
 <div>
+    @if(session()->has('message'))
+        <div role="alert" class="alert alert-success" wire:poll.5s
+            style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{{ session('message') }}</span>
+        </div>
+    @endif
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-white tracking-tight">Alert Settings</h1>
         <p class="text-gray-400 text-sm mt-1">Configure how and when you want to be notified.</p>
