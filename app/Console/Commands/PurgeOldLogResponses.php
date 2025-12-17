@@ -26,7 +26,7 @@ class PurgeOldLogResponses extends Command
      */
     public function handle()
     {
-        $limit = now()->subDayS(7);
+        $limit = now()->subDays(7);
 
         $quantity = LogResponse::where('created_at', '<', $limit)->delete();
 

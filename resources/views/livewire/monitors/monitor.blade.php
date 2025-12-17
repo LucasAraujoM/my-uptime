@@ -286,7 +286,7 @@ new class extends Component {
                 <x-form wire:submit="save" no-separator class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="col-span-1 md:col-span-2">
-                            <x-input label="Friendly Name" wire:model="name" placeholder="e.g. Production API"
+                            <x-input label="Monitor Name" wire:model="name" placeholder="e.g. Production API"
                                 class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500" />
                             <p class="text-xs text-gray-500 mt-1">A name to identify this monitor in your dashboard.</p>
                         </div>
@@ -394,12 +394,12 @@ new class extends Component {
                                 <x-textarea wire:model="body.{{ $index }}.body" rows="10"
                                     class="bg-gray-900/50 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                                     placeholder='
-                                    {
-                                        "userId": 1,
-                                        "id": 1,
-                                        "title": "delectus aut autem",
-                                        "completed": false
-                                    }' />
+                                        {
+                                            "userId": 1,
+                                            "id": 1,
+                                            "title": "delectus aut autem",
+                                            "completed": false
+                                        }' />
                             @endforeach
                             @if(!$body)
                                 <div class="col-span-1 md:col-span-2 flex justify-start mt-2">
@@ -506,80 +506,80 @@ new class extends Component {
                 </div>
 
                 <div class="h-80 relative w-full" x-data="{
-    chart: null,
-    init() {
-    const ctx = this.$refs.canvas.getContext('2d');
-    // Gradients
-    const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
-    gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
-    gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
-    this.chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: @js($chartLabels),
-            datasets: [
-                {
-                    label: 'Response Time (ms)',
-                    backgroundColor: gradientUp,
-                    borderColor: '#a855f7',
-                    borderWidth: 2,
-                    data: @js($chartData),
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
+        chart: null,
+        init() {
+        const ctx = this.$refs.canvas.getContext('2d');
+        // Gradients
+        const gradientUp = ctx.createLinearGradient(0, 0, 0, 300);
+        gradientUp.addColorStop(0, 'rgba(168, 85, 247, 0.2)'); // Purple
+        gradientUp.addColorStop(1, 'rgba(168, 85, 247, 0)');
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @js($chartLabels),
+                datasets: [
+                    {
+                        label: 'Response Time (ms)',
+                        backgroundColor: gradientUp,
+                        borderColor: '#a855f7',
+                        borderWidth: 2,
+                        data: @js($chartData),
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }
+                ]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
                 },
-                tooltip: {
-                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                    titleColor: '#fff',
-                    bodyColor: '#cbd5e1',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: true,
-                    usePointStyle: true,
-                    callbacks: {
-                        label: function(context) {
-                            return context.parsed.y + ' ms';
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: true,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' ms';
+                            }
                         }
                     }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
                 },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'} }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7280', font: {family: 'Instrument Sans'}, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+                    }
                 }
             }
-        }
-    });
-           Livewire.on('chart-updated', (data) => {
-               if (this.chart) {
-                   this.chart.data.labels = data[0].labels;
-                   this.chart.data.datasets[0].data = data[0].data;
-                   this.chart.update();
-               }
-           });
-       }
-    }" wire:ignore>
+        });
+               Livewire.on('chart-updated', (data) => {
+                   if (this.chart) {
+                       this.chart.data.labels = data[0].labels;
+                       this.chart.data.datasets[0].data = data[0].data;
+                       this.chart.update();
+                   }
+               });
+           }
+        }" wire:ignore>
                     <canvas x-ref="canvas"></canvas>
                 </div>
                 <!-- Custom Legend -->
