@@ -3,7 +3,6 @@
 Un sistema de monitoreo de tiempo de actividad (Uptime Monitor) autoalojado, construido con **Laravel 12**, **Livewire** y **Volt**.  
 Permite supervisar sitios web y servidores mediante comprobaciones HTTP y Ping, rastreando el tiempo de actividad, tiempos de respuesta y registrando incidentes.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=Preview+Dashboard) *(Reemplaza con una captura real si la tienes)*
 
 ## 🚀 Características Principales
 
