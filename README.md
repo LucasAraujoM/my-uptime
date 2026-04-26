@@ -1,4 +1,4 @@
-# Uptime Checker
+# my-uptime
 
 Un sistema de monitoreo de tiempo de actividad (Uptime Monitor) autoalojado, construido con **Laravel 12**, **Livewire** y **Volt**.  
 Permite supervisar sitios web y servidores mediante comprobaciones HTTP y Ping, rastreando el tiempo de actividad, tiempos de respuesta y registrando incidentes.
@@ -38,8 +38,8 @@ Sigue estos pasos para levantar el proyecto localmente:
 
 1.  **Clonar el repositorio**
     ```bash
-    git clone <url-del-repositorio>
-    cd uptime-checker
+    git clone https://github.com/LucasAraujoM/my-uptime.git
+    cd my-uptime
     ```
 
 2.  **Instalar dependencias de PHP**
