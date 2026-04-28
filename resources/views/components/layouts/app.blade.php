@@ -14,17 +14,15 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    @yield('head')
 </head>
 
 <body class="h-full font-sans antialiased text-gray-100 bg-gray-900 selection:bg-purple-500 selection:text-white">
-
+    <!-- Mobile navbar -->
     <x-nav sticky class="lg:hidden bg-gray-900/90 backdrop-blur-xl border-b border-gray-800">
         <x-slot:brand>
             <div class="flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-900/20">
-                    M
-                </div>
+                <img src="{{ asset('images/logo.png') }}" alt="Logo" class="w-8 h-8 rounded-lg object-contain">
                 <span class="font-bold text-xl tracking-tight">MyUptime</span>
             </div>
         </x-slot:brand>
@@ -36,67 +34,61 @@
     </x-nav>
 
     <x-main>
-        <x-slot:sidebar drawer="main-drawer" collapsible class="bg-gray-900 border-r border-gray-800 w-72">
-            <!-- Brand -->
-            <x-app-brand class="p-6">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-900/20">
-                        M
-                    </div>
-                    <span class="font-bold text-xl tracking-tight text-white mr-3">MyUptime</span>
-                </div>
-            </x-app-brand>
+        <!-- Sidebar -->
+        <x-slot:sidebar drawer="main-drawer" collapsible class="bg-gray-900 border-r border-gray-800 w-64">
+            <!-- Logo/Brand -->
+            <div class="p-4 pb-2">
+                <x-app-brand />
+            </div>
 
             @if($user = auth()->user())
-                <x-menu activate-by-route class="px-2 gap-1 text-gray-400">
-                    <!-- User Profile -->
-                    <x-menu-separator />
-                    <x-list-item :item="$user" value="name" sub-value="email" link="/users"
-                        class="hover:bg-gray-800/50 rounded-xl mb-4 p-2 text-white">
+                <x-menu activate-by-route separator="false" class="px-2 gap-1">
+                    <!-- User info -->
+                    <x-list-item :item="$user" value="name" sub-value="email"
+                        class="!rounded-xl mb-6 !p-3 hover:bg-gray-800/50 text-white">
                         <x-slot:avatar>
                             <x-avatar placeholder="{{ substr($user->name, 0, 1) }}"
                                 class="!w-9 !h-9 bg-gray-700 text-gray-200" />
                         </x-slot:avatar>
-                        <x-slot:actions>
-                            <x-icon name="o-cog-6-tooth" class="w-5 h-5 text-gray-500 hover:text-white" />
-                        </x-slot:actions>
                     </x-list-item>
 
+                    <!-- Main Navigation -->
+                    <div
+                        class="hidden-when-collapsed text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
+                        Main</div>
 
                     <x-menu-item title="Dashboard" icon="o-home" link="/dashboard"
-                        class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200"
                         active-class="!bg-purple-500/10 !text-purple-400" />
 
-                    <x-menu-sub title="Monitoring" icon="o-server-stack" class="text-gray-400 hover:text-white">
-                        <x-menu-item title="Monitors" icon="o-list-bullet" link="/monitors"
-                            class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200" />
+                    <!-- Monitoring Section -->
+                    <div
+                        class="hidden-when-collapsed text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2 mt-6">
+                        Monitoring</div>
 
-                        <x-menu-item title="Add Monitor" icon="o-plus-circle" link="/monitor/add"
-                            class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200" />
+                    <x-menu-item title="Monitors" icon="o-server" link="/monitors"
+                        active-class="!bg-purple-500/10 !text-purple-400" />
+                    <x-menu-item title="Add Monitor" icon="o-plus" link="/monitor/add" />
+                    <x-menu-item title="Incidents" icon="o-exclamation-circle" link="/incidents" />
 
-                        <x-menu-item title="Incidents" icon="o-exclamation-triangle" link="/incidents"
-                            class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200"
-                            hidden />
-                    </x-menu-sub>
+                    <!-- Settings Section -->
+                    <div
+                        class="hidden-when-collapsed text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2 mt-6">
+                        Settings</div>
 
-                    <x-menu-sub title="Settings" icon="o-cog-6-tooth" class="text-gray-400 hover:text-white">
-                        <x-menu-item title="Alerts" icon="o-bell" link="/alert-settings"
-                            class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200" />
+                    <x-menu-item title="General" icon="o-adjustments-horizontal" link="/settings" />
+                    <x-menu-item title="Alerts" icon="o-bell" link="/alert-settings" />
+                    <x-menu-item title="Team" icon="o-users" link="/team" />
+                    <x-menu-item title="Billing" icon="o-credit-card" link="/billing" />
 
-                        <x-menu-item title="Team" icon="o-users" link="/team"
-                            class="px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200" />
-                    </x-menu-sub>
-
-                    <x-menu-separator class="my-4 border-gray-800" />
-
+                    <!-- Logout -->
                     <x-menu-item title="Logout" icon="o-arrow-right-on-rectangle" link="/logout"
-                        class="px-3 py-2 rounded-lg hover:bg-red-500/10 hover:text-red-400 text-gray-400 transition-all duration-200" />
+                        class="!text-red-400 hover:!bg-red-500/10" />
                 </x-menu>
             @endif
         </x-slot:sidebar>
 
-        <x-slot:content class="bg-gray-900 lg:bg-gray-900">
+        <!-- Content -->
+        <x-slot:content class="bg-gray-900">
             <div class="max-w-7xl mx-auto p-4 lg:p-8">
                 {{ $slot }}
             </div>
@@ -104,6 +96,7 @@
     </x-main>
 
     <x-toast />
+    @yield('scripts')
 </body>
 
 </html>

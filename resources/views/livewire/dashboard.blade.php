@@ -109,11 +109,8 @@ new class extends Component {
 };
 ?>
 
-@section('title', 'Dashboard')
-
-@include('components.flash.messages')
-
 <div>
+    @include('components.flash.messages')
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4">
         <div>

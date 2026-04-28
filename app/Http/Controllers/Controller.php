@@ -26,11 +26,14 @@ class Controller
                 RateLimiter::availableIn($key);
                 return redirect()->back()->with('error', 'Too many attemps, try again in later.');
             }
+
             RateLimiter::hit($key);
+
             if (Auth::attempt($request->only('email', 'password'), $request->input('remember'))) {
                 RateLimiter::clear($key);
                 return redirect()->route('dashboard');
             }
+
             return redirect()->back()->with('error', 'Invalid credentials.');
         } catch (\Exception $e) {
             Log::error($e->getMessage());

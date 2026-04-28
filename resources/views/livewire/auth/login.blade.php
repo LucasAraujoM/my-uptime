@@ -39,10 +39,7 @@ new class extends Component {
     <div
         class="w-full max-w-md p-8 rounded-2xl bg-gray-900/40 backdrop-blur-xl border border-gray-700/50 shadow-2xl relative">
         <div class="text-center mb-8">
-            <div
-                class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-purple-900/20 mx-auto mb-6">
-                M
-            </div>
+            <img src="{{ asset('images/logo.png') }}" alt="MyUptime Logo" class="w-16 h-16 mx-auto mb-6 object-contain">
             <h2 class="text-3xl font-bold text-white tracking-tight"
                 style="font-family: 'Instrument Sans', sans-serif;">Welcome Back</h2>
             <p class="text-gray-400 mt-2">Sign in to your dashboard</p>
